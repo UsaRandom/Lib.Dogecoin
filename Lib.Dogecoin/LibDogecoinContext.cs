@@ -1,9 +1,7 @@
-﻿namespace Lib.Dogecoin
+﻿using System.Runtime.InteropServices;
+
+namespace Lib.Dogecoin
 {
-	/// <summary>
-	/// There is a non-zero chance that this is supposed to be freeing up resources
-	/// that is is currently not. Need to test.
-	/// </summary>
 	public class LibDogecoinContext : IDisposable
 	{
 		private static object _lock = new object();
@@ -137,7 +135,8 @@
 				return new string(mnemonic).TrimEnd('\0');
 			}
 		}
-		
+
+
 		public string GetDerivedHDAddressFromMnemonic(int account, int index, string changeLevel, string mnemonic, string password, bool testNet)
 		{
 			lock (_lock)
@@ -211,6 +210,8 @@
 			}
 		}
 
+		
+
 		public string GetRawTransaction(int txIndex)
 		{
 			lock (_lock)
@@ -218,6 +219,44 @@
 				return new string(LibDogecoinInterop.get_raw_transaction(txIndex));
 			}
 		}
+
+
+		public bool SignTransaction(int txIndex, string scriptPubKey, string privKey)
+		{
+			lock (_lock)
+			{
+				return 0 != LibDogecoinInterop.sign_transaction(txIndex, scriptPubKey.ToCharArray(), privKey.ToCharArray());
+			}
+		}
+
+		public bool SignTransactionWithPrivateKey(int txIndex, int vOutIndex, string privKey)
+		{
+			lock (_lock)
+			{
+				return 0 != LibDogecoinInterop.sign_transaction_w_privkey(txIndex, vOutIndex, privKey.ToCharArray());
+			}
+		}
+
+
+
+
+		public void ClearTransaction(int txIndex)
+		{
+			lock (_lock)
+			{
+				LibDogecoinInterop.clear_transaction(txIndex);
+			}
+		}
+
+
+		public void RemoveAllTransactions(int txIndex)
+		{
+			lock (_lock)
+			{
+				LibDogecoinInterop.remove_all();
+			}
+		}
+
 
 		public string SignMessage(string privateKey, string message)
 		{
@@ -234,6 +273,33 @@
 				return LibDogecoinInterop.verify_message(signature.ToCharArray(), message.ToCharArray(), address.ToCharArray());
 			}
 		}
+
+
+
+
+
+		public string KoinuToCoinString(ulong amount)
+		{
+			lock (_lock)
+			{
+				//21 should be long enough?
+				var coinStr = new char[21];
+
+				LibDogecoinInterop.koinu_to_coins_str(amount, coinStr);
+
+				return new string(coinStr).TrimEnd('\0');
+			}
+		}
+
+		public ulong CoinStringToKoinu(string coinStr)
+		{
+			lock (_lock)
+			{
+				return LibDogecoinInterop.coins_to_koinu_str(coinStr.ToCharArray());
+			}
+		}
+
+
 
 
 		public void Dispose()

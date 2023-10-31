@@ -195,5 +195,58 @@ namespace Lib.Dogecoin
 
 
 
+		/* sign a raw transaction in memory at (txindex), sign (inputindex) with (scripthex) of (sighashtype), with (privkey) */
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		internal static extern int sign_transaction(
+			int txindex,
+			[MarshalAs(UnmanagedType.LPArray)] char[] script_pubkey,
+			[MarshalAs(UnmanagedType.LPArray)] char[] privkey
+		);
+
+		/* Sign a formed transaction with working transaction index (txindex), prevout.n index (vout_index) and private key (privkey) */
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		internal static extern int sign_transaction_w_privkey(
+			int txindex,
+			int vout_index,
+			[MarshalAs(UnmanagedType.LPArray)] char[] privkey
+		);
+
+		/* clear all internal working transactions */
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		internal static extern void remove_all();
+
+		/* clear the transaction at (txindex) in memory */
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		internal static extern void clear_transaction(int txindex);
+
+
+
+
+
+		/* Koinu functions */
+
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		public static extern int koinu_to_coins_str(
+			ulong koinu,
+			[Out, MarshalAs(UnmanagedType.LPArray)] char[] str
+		);
+
+
+
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		public static extern ulong coins_to_koinu_str(
+			[MarshalAs(UnmanagedType.LPArray)] char[] coins
+		);
+
+
+		/* Memory functions */
+
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		public static extern IntPtr dogecoin_char_vla(uint size);
+
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		public static extern void dogecoin_free(IntPtr ptr);
+
+
 	}
 }
