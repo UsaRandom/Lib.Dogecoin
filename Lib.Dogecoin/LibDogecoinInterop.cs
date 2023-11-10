@@ -7,6 +7,15 @@ using System.Threading.Tasks;
 
 namespace Lib.Dogecoin
 {
+	/*
+	 * Note,
+	 * 
+	 * This is not a complete set of bindings for libdogecoin, but a starting point
+	 * for those who want to build ontop of libdogecoin. 
+	 * 
+	 * Please see the dogecoin foundation's repo for infomration on how to build
+	 * and use libdogecoin. 
+	 */
 	internal static class LibDogecoinInterop
 	{
 		private const string DLL_NAME = "dogecoin";
@@ -131,24 +140,22 @@ namespace Lib.Dogecoin
 		);
 
 
-		///* Creates a .png file with the filename outFilename, from string inString, w. size factor of SizeMultiplier.*/
-		////int qrgen_string_to_qr_pngfile(const char* outFilename,
-		////const char* inString, uint8_t sizeMultiplier);
-		//[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
-		//internal static extern int qrgen_string_to_qr_pngfile(
-		//	[MarshalAs(UnmanagedType.LPArray)] char[] outFilename,
-		//	[MarshalAs(UnmanagedType.LPArray)] char[] inString,
-		//	byte sizeMultiplier
-		//);
+		/* Creates a .png file with the filename outFilename, from string inString, w. size factor of SizeMultiplier.*/
 
-		///* Creates a .jpg file with the filename outFilename, from string inString, w. size factor of SizeMultiplier.*/
-		////int qrgen_string_to_qr_jpgfile(const char* outFilename, const char* inString, uint8_t sizeMultiplier);
-		//[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
-		//internal static extern int qrgen_string_to_qr_jpgfile(
-		//	[MarshalAs(UnmanagedType.LPArray)] char[] outFilename,
-		//	[MarshalAs(UnmanagedType.LPArray)] char[] inString,
-		//	byte sizeMultiplier
-		//);
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		internal static extern int qrgen_string_to_qr_pngfile(
+			[MarshalAs(UnmanagedType.LPArray)] char[] outFilename,
+			[MarshalAs(UnmanagedType.LPArray)] char[] inString,
+			byte sizeMultiplier
+		);
+
+		/* Creates a .jpg file with the filename outFilename, from string inString, w. size factor of SizeMultiplier.*/
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		internal static extern int qrgen_string_to_qr_jpgfile(
+			[MarshalAs(UnmanagedType.LPArray)] char[] outFilename,
+			[MarshalAs(UnmanagedType.LPArray)] char[] inString,
+			byte sizeMultiplier
+		);
 
 
 		/* create a new dogecoin transaction: Returns the (txindex) in memory of the transaction being worked on. */

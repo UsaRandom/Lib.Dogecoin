@@ -1,44 +1,56 @@
+using System.Security.Cryptography.X509Certificates;
+
 namespace Lib.Dogecoin.Test
 {
 	[TestClass]
 	public class LibDogecoinTests
 	{
-		[TestMethod]
-		public void LibDogecoin_Test()
+		private LibDogecoinContext? ctx;
+
+		[TestInitialize]
+		public void BeforeTests()
 		{
-			using(var ctx = LibDogecoinContext.CreateContext())
-			{
-				var masterKeys = ctx.GenerateHDMasterPubKeyPair();
+			ctx = LibDogecoinContext.CreateContext();
+		}
 
-				Console.WriteLine($"Master Private: {masterKeys.privateKey}");
-				Console.WriteLine($"Master Public:  {masterKeys.publicKey}");
+		[TestCleanup]
+		public void AfterTests()
+		{
+			ctx.Dispose();
+		}
 
+		[TestMethod]
+		public void GeneratePrivPubKeyPair_Test()
+		{
+			var keys = ctx.GeneratePrivPubKeyPair(true);
 
-				var derivedPubKey = ctx.GenerateDerivedHDPubKey(masterKeys.privateKey);
-				Console.WriteLine($"Derived Public: {derivedPubKey}");
-
-
-
-				var byPathRes = ctx.GetDerivedHDAddressByPath(masterKeys.privateKey, "m/0/0/0", false);
-
-				Console.WriteLine($"m/0/0/0 Public Key: {byPathRes}");
-
-
-				byPathRes = ctx.GetDerivedHDAddressByPath(masterKeys.privateKey, "m/0/0/1", false);
-
-				Console.WriteLine($"m/0/0/1 Public Key: {byPathRes}");
+			Assert.IsNotNull(keys);
+			Assert.IsTrue(ctx.VerifyPrivPubKeyPair(keys.privateKey, keys.publicKey, true));
+		}
 
 
-				var mnemonic = ctx.GenerateRandomEnglishMnemonic(LibDogecoinContext.ENTROPY_SIZE_128);
+		[TestMethod]
+		public void GenerateHDMasterPubKeyPair_Test()
+		{
+			var keys = ctx.GenerateHDMasterPubKeyPair(true);
 
-				Console.WriteLine($"Mnemonic: {mnemonic}");
+			Assert.IsNotNull(keys);
+			Assert.IsTrue(ctx.VerifyHDMasterPubKeyPair(keys.privateKey, keys.publicKey, true));
+		}
 
+		[TestMethod]
+		public void GetDerivedHDAddressByPath_Test()
+		{
+			var keys = ctx.GenerateHDMasterPubKeyPair(true);
 
-				var qrStr = ctx.P2pkhToQrString(masterKeys.publicKey);
+			Assert.IsNotNull(keys);
+			Assert.IsTrue(ctx.VerifyHDMasterPubKeyPair(keys.privateKey, keys.publicKey, true));
 
-				Console.WriteLine(qrStr);
+			var derivedKeys = (
+					privateKey: ctx.GetDerivedHDAddressByPath(keys.privateKey, "m/0/0/4", true),
+					publicKey: ctx.GetDerivedHDAddressByPath(keys.privateKey, "m/0/0/4", false)
+			);
 
-			}
 		}
 	}
 }

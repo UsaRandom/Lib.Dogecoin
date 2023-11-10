@@ -5,7 +5,7 @@ namespace Lib.Dogecoin
 	public class LibDogecoinContext : IDisposable
 	{
 		private static object _lock = new object();
-		private static LibDogecoinContext _instance;
+		private static LibDogecoinContext? _instance;
 
 		private bool _disposed = false;
 
@@ -40,7 +40,7 @@ namespace Lib.Dogecoin
 
 				LibDogecoinInterop.generatePrivPubKeypair(privKey, pubKey, testNet);
 
-				return (new string(privKey), new string(pubKey));
+				return (privKey.TerminateNull(), pubKey.TerminateNull());
 			}
 		}
 
@@ -53,7 +53,7 @@ namespace Lib.Dogecoin
 
 				LibDogecoinInterop.generateHDMasterPubKeypair(privKey, pubKey, testNet);
 
-				return (new string(privKey), new string(pubKey));
+				return (privKey.TerminateNull(), pubKey.TerminateNull());
 			}
 		}
 
@@ -64,9 +64,9 @@ namespace Lib.Dogecoin
 			{
 				var pubKey = new char[34];
 
-				LibDogecoinInterop.generateDerivedHDPubkey(masterPrivKey.ToCharArray(), pubKey);
+				LibDogecoinInterop.generateDerivedHDPubkey(masterPrivKey.NullTerminate(), pubKey);
 
-				return new string(pubKey);
+				return pubKey.TerminateNull();
 			}
 		}
 
@@ -77,12 +77,12 @@ namespace Lib.Dogecoin
 				var key = new char[111];
 
 				LibDogecoinInterop.getDerivedHDAddressByPath(
-					masterPrivKey.ToCharArray(),
-					derivedPath.ToCharArray(),
+					masterPrivKey.NullTerminate(),
+					derivedPath.NullTerminate(),
 					key,
 					isPriv);
 
-				return new string(key);
+				return key.TerminateNull();
 			}
 		}
 
@@ -90,7 +90,7 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				return 0 != LibDogecoinInterop.verifyPrivPubKeypair(privKey.ToCharArray(), pubKey.ToCharArray(), testNet);
+				return 0 != LibDogecoinInterop.verifyPrivPubKeypair(privKey.NullTerminate(), pubKey.NullTerminate(), testNet);
 			}
 		}
 
@@ -98,7 +98,7 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				return 0 != LibDogecoinInterop.verifyHDMasterPubKeypair(privKey.ToCharArray(), pubKey.ToCharArray(), testNet);
+				return 0 != LibDogecoinInterop.verifyHDMasterPubKeypair(privKey.NullTerminate(), pubKey.NullTerminate(), testNet);
 			}
 		}
 
@@ -106,7 +106,7 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				return 0 != LibDogecoinInterop.verifyP2pkhAddress(pubKey.ToCharArray(), (uint)pubKey.Length);
+				return 0 != LibDogecoinInterop.verifyP2pkhAddress(pubKey.NullTerminate(), (uint)pubKey.Length);
 			}
 		}
 
@@ -117,9 +117,9 @@ namespace Lib.Dogecoin
 			{
 				var mnemonic = new char[1024];
 
-				LibDogecoinInterop.generateEnglishMnemonic(entropy.ToCharArray(), entropySize.ToCharArray(), mnemonic);
+				LibDogecoinInterop.generateEnglishMnemonic(entropy.NullTerminate(), entropySize.NullTerminate(), mnemonic);
 
-				return new string(mnemonic);
+				return mnemonic.TerminateNull();
 			}
 		}
 
@@ -130,9 +130,9 @@ namespace Lib.Dogecoin
 			{
 				var mnemonic = new char[1024];
 
-				LibDogecoinInterop.generateRandomEnglishMnemonic(entropySize.ToCharArray(), mnemonic);
+				LibDogecoinInterop.generateRandomEnglishMnemonic(entropySize.NullTerminate(), mnemonic);
 
-				return new string(mnemonic).TrimEnd('\0');
+				return mnemonic.TerminateNull();
 			}
 		}
 
@@ -146,15 +146,17 @@ namespace Lib.Dogecoin
 				LibDogecoinInterop.getDerivedHDAddressFromMnemonic(
 					(uint)account,
 					(uint)index,
-					changeLevel.ToCharArray(),
-					mnemonic.ToCharArray(),
-					password.ToCharArray(),
+					changeLevel.NullTerminate(),
+					mnemonic.NullTerminate(),
+					password.NullTerminate(),
 					address,
 					testNet);
 
-				return new string(address).TrimEnd('\0');
+				return address.TerminateNull();
 			}
 		}
+
+
 
 
 		public string P2pkhToQrString(string p2pkh)
@@ -163,11 +165,30 @@ namespace Lib.Dogecoin
 			{
 				var qrString = new char[3918 * 4];
 
-				LibDogecoinInterop.qrgen_p2pkh_to_qr_string(p2pkh.ToCharArray(), qrString);
+				LibDogecoinInterop.qrgen_p2pkh_to_qr_string(p2pkh.NullTerminate(), qrString);
 
-				return new string(qrString).TrimEnd('\0');
+				return qrString.TerminateNull();
 			}
 		}
+
+
+		public bool StringToQrPng(string qrString, string file, byte sizeMultiplier = 100)
+		{
+            lock (_lock)
+            {
+				return -1 != LibDogecoinInterop.qrgen_string_to_qr_pngfile(file.NullTerminate(), qrString.NullTerminate(), sizeMultiplier);
+			}
+		}
+
+		public bool StringToQrJpg(string qrString, string file, byte sizeMultiplier = 100)
+		{
+			lock (_lock)
+			{
+				return -1 != LibDogecoinInterop.qrgen_string_to_qr_jpgfile(file.NullTerminate(), qrString.NullTerminate(), sizeMultiplier);
+			}
+		}
+
+
 
 
 		public int StartTransaction()
@@ -183,7 +204,7 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				return 0 != LibDogecoinInterop.add_utxo(txIndex, hexUTXOTxId.ToCharArray(), vOut);
+				return 0 != LibDogecoinInterop.add_utxo(txIndex, hexUTXOTxId.NullTerminate(), vOut);
 			}
 		}
 
@@ -192,7 +213,7 @@ namespace Lib.Dogecoin
 		{
 			lock(_lock)
 			{
-				return 0 != LibDogecoinInterop.add_output(txIndex, destinationAddress.ToCharArray(), amount.ToCharArray());
+				return 0 != LibDogecoinInterop.add_output(txIndex, destinationAddress.NullTerminate(), amount.NullTerminate());
 			}
 		}
 
@@ -201,12 +222,12 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				return new string(LibDogecoinInterop.finalize_transaction(
+				return LibDogecoinInterop.finalize_transaction(
 										txIndex,
-										destinationAddress.ToCharArray(),
-										fee.ToCharArray(),
-										outputSum.ToCharArray(),
-										changeAddress.ToCharArray()));
+										destinationAddress.NullTerminate(),
+										fee.NullTerminate(),
+										outputSum.NullTerminate(),
+										changeAddress.NullTerminate()).TerminateNull();
 			}
 		}
 
@@ -216,7 +237,7 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				return new string(LibDogecoinInterop.get_raw_transaction(txIndex));
+				return LibDogecoinInterop.get_raw_transaction(txIndex).TerminateNull();
 			}
 		}
 
@@ -225,7 +246,7 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				return 0 != LibDogecoinInterop.sign_transaction(txIndex, scriptPubKey.ToCharArray(), privKey.ToCharArray());
+				return 0 != LibDogecoinInterop.sign_transaction(txIndex, scriptPubKey.NullTerminate(), privKey.NullTerminate());
 			}
 		}
 
@@ -233,7 +254,7 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				return 0 != LibDogecoinInterop.sign_transaction_w_privkey(txIndex, vOutIndex, privKey.ToCharArray());
+				return 0 != LibDogecoinInterop.sign_transaction_w_privkey(txIndex, vOutIndex, privKey.NullTerminate());
 			}
 		}
 
@@ -262,7 +283,7 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				return new string(LibDogecoinInterop.sign_message(privateKey.ToCharArray(), message.ToCharArray()));
+				return LibDogecoinInterop.sign_message(privateKey.NullTerminate(), message.NullTerminate()).TerminateNull();
 			}
 		}
 
@@ -270,7 +291,7 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				return LibDogecoinInterop.verify_message(signature.ToCharArray(), message.ToCharArray(), address.ToCharArray());
+				return LibDogecoinInterop.verify_message(signature.NullTerminate(), message.NullTerminate(), address.NullTerminate());
 			}
 		}
 
@@ -282,12 +303,11 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				//21 should be long enough?
 				var coinStr = new char[21];
 
 				LibDogecoinInterop.koinu_to_coins_str(amount, coinStr);
 
-				return new string(coinStr).TrimEnd('\0');
+				return coinStr.TerminateNull();
 			}
 		}
 
@@ -295,7 +315,7 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				return LibDogecoinInterop.coins_to_koinu_str(coinStr.ToCharArray());
+				return LibDogecoinInterop.coins_to_koinu_str(coinStr.NullTerminate());
 			}
 		}
 
