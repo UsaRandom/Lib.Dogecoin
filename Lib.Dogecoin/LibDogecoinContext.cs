@@ -227,11 +227,23 @@ namespace Lib.Dogecoin
 										destinationAddress.NullTerminate(),
 										fee.NullTerminate(),
 										outputSum.NullTerminate(),
-										changeAddress.NullTerminate()).TerminateNull();
+										changeAddress?.NullTerminate()).TerminateNull();
 			}
 		}
 
 		
+
+		public string AddressToPubKeyHash(string address)
+		{
+			lock(_lock)
+			{
+				var pubkeyhash = new char[50];
+
+				var result = LibDogecoinInterop.dogecoin_p2pkh_address_to_pubkey_hash(address.NullTerminate(), pubkeyhash);
+
+				return pubkeyhash.TerminateNull();
+			}
+		}
 
 		public string GetRawTransaction(int txIndex)
 		{
@@ -270,7 +282,7 @@ namespace Lib.Dogecoin
 		}
 
 
-		public void RemoveAllTransactions(int txIndex)
+		public void RemoveAllTransactions()
 		{
 			lock (_lock)
 			{
@@ -283,7 +295,11 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				return LibDogecoinInterop.sign_message(privateKey.NullTerminate(), message.NullTerminate()).TerminateNull();
+				//sign_message can return a char[]* or false
+				//so we accept a pointer, try to cast to string and fallback on string.empty 
+				var value = LibDogecoinInterop.sign_message(privateKey.NullTerminate(), message.NullTerminate());
+
+				return Marshal.PtrToStringAnsi(value) ?? string.Empty;
 			}
 		}
 

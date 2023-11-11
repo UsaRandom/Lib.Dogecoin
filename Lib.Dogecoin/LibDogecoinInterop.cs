@@ -117,7 +117,7 @@ namespace Lib.Dogecoin
 
 		/* sign a message with a private key */
 		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
-		internal static extern char[] sign_message(
+		internal static extern IntPtr sign_message(
 			[MarshalAs(UnmanagedType.LPArray)] char[] privkey,
 			[MarshalAs(UnmanagedType.LPArray)] char[] msg
 		);
@@ -216,6 +216,17 @@ namespace Lib.Dogecoin
 			int txindex,
 			int vout_index,
 			[MarshalAs(UnmanagedType.LPArray)] char[] privkey
+		);
+
+
+		/**
+		 * It takes a p2pkh address and converts it to a compressed public key in
+		 * hexadecimal format. It then strips the network prefix and checksum
+		 */
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		public static extern byte dogecoin_p2pkh_address_to_pubkey_hash(
+			[MarshalAs(UnmanagedType.LPArray)] char[] p2pkh,
+			[Out, MarshalAs(UnmanagedType.LPArray)] char[] pubkeyHash
 		);
 
 		/* clear all internal working transactions */
