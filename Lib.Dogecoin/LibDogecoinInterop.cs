@@ -186,7 +186,7 @@ namespace Lib.Dogecoin
 		/* finalize the transaction being worked on at (txindex), with the (destinationaddress) paying a fee of (subtractedfee), */
 		/* re-specify the amount in dogecoin for verification, and change address for change. If not specified, change will go to the first utxo's address. */
 		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
-		internal static extern char[] finalize_transaction(
+		internal static extern IntPtr finalize_transaction(
 			int txindex,
 			[MarshalAs(UnmanagedType.LPArray)] char[] destinationaddress,
 			[MarshalAs(UnmanagedType.LPArray)] char[] subtractedfee,
@@ -194,9 +194,42 @@ namespace Lib.Dogecoin
 			[MarshalAs(UnmanagedType.LPArray)] char[] changeaddress
 		);
 
+
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		internal static extern int sign_raw_transaction(int inputindex,
+
+			IntPtr incomingrawtx,
+			[MarshalAs(UnmanagedType.LPArray)] char[] scripthex,
+			int sighashtype,
+			[MarshalAs(UnmanagedType.LPArray)] char[] privkey);
+
+
+
+
+		/**
+		 * @brief This function generates a HD master key and p2pkh ready-to-use corresponding dogecoin address from a mnemonic.
+		 *
+		 * @param hd_privkey_master The generated master private key.
+		 * @param p2pkh_pubkey_master The generated master public key.
+		 * @param mnemonic The mnemonic code words.
+		 * @param passphrase The passphrase (optional).
+		 * @param is_testnet The flag denoting which network, 0 for mainnet and 1 for testnet.
+		 *
+		 * return: 0 (success), -1 (fail)
+		 */
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		internal static extern int generateHDMasterPubKeypairFromMnemonic
+			([Out, MarshalAs(UnmanagedType.LPArray)] char[] hd_privkey_master,
+			[Out, MarshalAs(UnmanagedType.LPArray)] char[] p2pkh_pubkey_master,
+			[MarshalAs(UnmanagedType.LPArray)] char[] mnemonic,
+			[MarshalAs(UnmanagedType.LPArray)] char[] pass,
+			[MarshalAs(UnmanagedType.I1)] bool is_testnet);
+
+
+
 		/* retrieve the raw transaction at (txindex) as a hex string (char*) */
 		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
-		internal static extern char[] get_raw_transaction(
+		internal static extern IntPtr get_raw_transaction(
 			int txindex
 		);
 

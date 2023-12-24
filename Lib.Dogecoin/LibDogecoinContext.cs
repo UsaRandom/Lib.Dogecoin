@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace Lib.Dogecoin
 {
@@ -222,16 +223,51 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				return LibDogecoinInterop.finalize_transaction(
+				return Marshal.PtrToStringAnsi(LibDogecoinInterop.finalize_transaction(
 										txIndex,
 										destinationAddress.NullTerminate(),
 										fee.NullTerminate(),
 										outputSum.NullTerminate(),
-										changeAddress?.NullTerminate()).TerminateNull();
+										changeAddress.NullTerminate()));
+
+				
 			}
 		}
 
-		
+
+		public string SignRawTransaction(int inputindex, string incomingrawtx, string scripthex, int sighashtype, string privkey)
+		{
+			lock (_lock)
+			{
+				IntPtr result = Marshal.StringToHGlobalAnsi(incomingrawtx);
+			//	var result = incomingrawtx.NullTerminate();
+
+				LibDogecoinInterop.sign_raw_transaction(
+										inputindex,
+										result,
+										scripthex.NullTerminate(),
+										sighashtype,
+										privkey.NullTerminate());
+
+				return Marshal.PtrToStringAnsi(result);
+			}
+		}
+
+
+		public (string privateKey, string publicKey) GenerateHDMasterPubKeypairFromMnemonic(string mnemonic, string pass = null, bool isTest=false)
+		{
+			lock(_lock)
+			{
+				var privKey = new char[255];
+				var pubKey = new char[255];
+
+				LibDogecoinInterop.generateHDMasterPubKeypairFromMnemonic(privKey, pubKey, mnemonic.NullTerminate(), null, isTest);
+
+				return (privKey.TerminateNull(), pubKey.TerminateNull());
+			}
+		}
+
+
 
 		public string AddressToPubKeyHash(string address)
 		{
@@ -249,7 +285,9 @@ namespace Lib.Dogecoin
 		{
 			lock (_lock)
 			{
-				return LibDogecoinInterop.get_raw_transaction(txIndex).TerminateNull();
+				IntPtr returnValue = LibDogecoinInterop.get_raw_transaction(txIndex);
+
+				return Marshal.PtrToStringAnsi(returnValue);
 			}
 		}
 

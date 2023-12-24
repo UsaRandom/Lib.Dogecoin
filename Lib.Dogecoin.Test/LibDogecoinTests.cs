@@ -1,4 +1,9 @@
+using System;
+using System.Net;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using System.Text.Json.Nodes;
 
 namespace Lib.Dogecoin.Test
 {
@@ -111,26 +116,112 @@ namespace Lib.Dogecoin.Test
 			}
 		}
 
+		[TestMethod]
+		public void GetRawTransaction_Test()
+		{
+			int index = ctx.StartTransaction();
+
+			var rawhex = ctx.GetRawTransaction(index);
+
+			Console.WriteLine($"The transaction hex at index {index} is {rawhex}.");
+
+			ctx.ClearTransaction(index);
+		}
+
 
 		[TestMethod]
+		public void CreateNewKey()
+		{
+
+			var mnemonic = ctx.GenerateRandomEnglishMnemonic(LibDogecoinContext.ENTROPY_SIZE_256);
+			Console.WriteLine(mnemonic);
+			
+			var keys = ctx.GenerateHDMasterPubKeypairFromMnemonic(mnemonic);
+
+			Console.WriteLine(keys.privateKey);
+			Console.WriteLine(keys.publicKey);
+
+
+		}
+
+			[TestMethod]
 		public void Transaction_Test()
 		{
-			var keys = (
-				privateKey: "ckatr3VKCwMuSHtmNFhPjeLUkH2CuNksifYfJFvndrNzPTqmP6G1",
-				publicKey: "nmc5oMsFroWXLUCejJUWRzHqxeySXqf6UL"
-			);
-
-			//paying them back
-			var utxoTx = "9ceca587d3cd24acdd07e42e9d3b269abb7fe5051aba5d81ef4c51ca1d88eee4";
-			var dest = "nokbHsGdAAMFVAhHDN9M8VNCafip7mvVB5";
 
 			ctx.RemoveAllTransactions();
 
-			var transactionId = ctx.StartTransaction();
+			string rpcUrl = "http://localhost:22555"; // Replace with your Dogecoin node's RPC URL
+				string username = "...";
+				string password = "...";
 
-			Assert.IsTrue(ctx.AddUTXO(transactionId, utxoTx, 0));
-			Assert.IsTrue(ctx.AddOutput(transactionId, dest, ctx.KoinuToCoinString(13015210527)));
-			Assert.IsTrue(ctx.SignTransactionWithPrivateKey(transactionId, 0, keys.privateKey));
+				var rpcClient = new DogecoinRpcClient(rpcUrl, username, password);
+
+
+			var keys = (privateKey: "...",
+						publicKey: "...");
+
+			Console.WriteLine(keys.privateKey);
+			Console.WriteLine(keys.publicKey);
+
+			Console.WriteLine(rpcClient.AddAddressToWatch(keys.publicKey, "slot1"));
+
+			var unspentRaw = rpcClient.ListUnspent(keys.publicKey);
+
+			var unspentJson = JsonObject.Parse(unspentRaw);
+			Console.WriteLine(unspentJson.ToString());
+
+			var utxoJsonArray = unspentJson["result"].AsArray();
+
+
+			var utxoString = new StringBuilder();
+			foreach (var utxoJson in utxoJsonArray)
+			{
+				utxoString.Append($"{utxoJson["txid"].ToString()}|");
+				utxoString.Append($"{utxoJson["vout"].ToString()}|");
+				utxoString.Append($"{utxoJson["scriptPubKey"].ToString()}|");
+				utxoString.AppendLine($"{utxoJson["amount"].ToString()}");
+			}
+
+
+			var resultString = utxoString.ToString();
+
+
+			var utxos = resultString.Split('\n');
+
+			var id = ctx.StartTransaction();
+
+
+			foreach (var utxo in utxos)
+			{
+				if(string.IsNullOrEmpty(utxo))
+				{
+					continue;
+				}
+				var parts = utxo.Split('|');
+
+				var txId = parts[0];
+				var vout = Int32.Parse(parts[1]);
+				var scriptPubKey = parts[2];
+				var amount = parts[3];
+
+
+				ctx.AddUTXO(id, txId, vout);
+			}
+			ctx.AddOutput(id, "...", "1.925");
+			
+
+			if(ctx.SignTransactionWithPrivateKey(id, 0, keys.privateKey) &&
+				ctx.SignTransactionWithPrivateKey(id, 1, keys.privateKey))
+			{
+				
+				var rawTransaction = ctx.GetRawTransaction(id);
+				Console.WriteLine(rawTransaction);
+				Console.WriteLine(rpcClient.BroadcastRawTransaction(rawTransaction));
+			}
+
+			ctx.RemoveAllTransactions();
+
+
 		}
 	}
 }
