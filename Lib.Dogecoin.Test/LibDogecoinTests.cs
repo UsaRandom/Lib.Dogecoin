@@ -153,5 +153,16 @@ namespace Lib.Dogecoin.Test
 
 		}
 
+		[TestMethod]
+		public void TestTPM()
+		{
+			var mnemonic = ctx.GenerateMnemonicEncryptWithTPM(5, false);
+
+			var decryped = ctx.DecryptMnemonicWithTPM(5);
+
+
+			Assert.AreEqual(mnemonic, decryped);
+		}
+
 	}
 }
