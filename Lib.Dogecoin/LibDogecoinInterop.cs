@@ -21,6 +21,8 @@ namespace Lib.Dogecoin
 		private const string DLL_NAME = "dogecoin";
 
 
+		
+
 		//!init static ecc context
 		[DllImport(DLL_NAME, CallingConvention = CallingConvention.Cdecl)]
 		internal static extern void dogecoin_ecc_start();
@@ -330,6 +332,56 @@ namespace Lib.Dogecoin
 		[return: MarshalAs(UnmanagedType.I1)]
 		public static extern bool dogecoin_list_encryption_keys_in_tpm(IntPtr names, out IntPtr count);
 
+
+
+		#region SPV
+
+
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		public static extern IntPtr dogecoin_spv_client_new(
+			IntPtr chainparams,
+			[MarshalAs(UnmanagedType.U1)] bool debug,
+			[MarshalAs(UnmanagedType.U1)] bool headers_memonly,
+			[MarshalAs(UnmanagedType.U1)] bool use_checkpoints,
+			[MarshalAs(UnmanagedType.U1)] bool full_sync);
+
+
+
+
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		public static extern IntPtr chain_from_b58_prefix(
+			[MarshalAs(UnmanagedType.LPArray)] char[] address
+			);
+
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		public static unsafe extern dogecoin_tx_out_type dogecoin_script_classify(
+			 cstring* script,
+			 vector* data_out
+		);
+
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		public static extern void dogecoin_spv_client_runloop(
+			IntPtr client
+		);
+
+		[DllImport(DLL_NAME, CallingConvention = CallingConvention.Cdecl)]
+		public static extern void dogecoin_spv_client_discover_peers(IntPtr client, [In, MarshalAs(UnmanagedType.LPStr)] string ips);
+
+
+		[DllImport(DLL_NAME, CallingConvention = CallingConvention.Cdecl)]
+		public static unsafe extern vector* vector_new(UInt64 res, IntPtr free_f);
+
+		[DllImport(DLL_NAME, CallingConvention = CallingConvention.Cdecl)]
+		public static extern void vector_remove_idx(vector vec, int idx);
+
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		public static extern bool dogecoin_p2pkh_addr_from_hash160(
+			byte[] hashin,
+			IntPtr chain,
+			[Out, MarshalAs(UnmanagedType.LPArray)] char[] addrout,
+			uint len);
+
+		#endregion SPV
 
 	}
 }

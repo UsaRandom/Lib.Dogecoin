@@ -31,7 +31,18 @@ namespace Lib.Dogecoin.Test
 
 			Assert.IsNotNull(keys);
 			Assert.IsTrue(ctx.VerifyPrivPubKeyPair(keys.privateKey, keys.publicKey, true));
+
+
+			
 		}
+
+
+		[TestMethod]
+		public void RunSPVNode()
+		{
+	//		ctx.RunSPVNode();
+		}
+
 
 
 		[TestMethod]

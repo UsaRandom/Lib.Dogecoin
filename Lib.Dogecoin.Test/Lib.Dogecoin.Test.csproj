@@ -19,4 +19,10 @@
     <ProjectReference Include="..\Lib.Dogecoin\Lib.Dogecoin.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="main_wallet.db">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
