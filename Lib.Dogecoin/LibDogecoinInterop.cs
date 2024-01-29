@@ -381,6 +381,16 @@ namespace Lib.Dogecoin
 			[Out, MarshalAs(UnmanagedType.LPArray)] char[] addrout,
 			uint len);
 
+
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		public static unsafe extern void vector_free(vector* vec, bool free_array);
+
+
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		public static unsafe extern dogecoin_tx_out_type dogecoin_script_classify_ops(vector* ops);
+
+
+
 		#endregion SPV
 
 	}

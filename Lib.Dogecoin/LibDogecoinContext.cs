@@ -499,8 +499,6 @@ namespace Lib.Dogecoin
 					nameof(dogecoin_spv_client.sync_transaction)).ToInt32(), Marshal.GetFunctionPointerForDelegate(syncTransactionCallback));
 
 
-
-
 				Marshal.WriteIntPtr(node,
 					Marshal.OffsetOf(typeof(dogecoin_spv_client),
 					nameof(dogecoin_spv_client.sync_transaction_ctx)).ToInt32(), IntPtr.MaxValue);
@@ -513,6 +511,8 @@ namespace Lib.Dogecoin
 		private static dogecoin_spv_client.sync_transaction_delegate syncTransactionCallback;
 		private static dogecoin_free_delegate freeDelegate;
 
+
+
 		public unsafe static void SyncTransaction(IntPtr ctx, IntPtr tx, uint pos, IntPtr blockindex)
 		{
 			var transaction = Marshal.PtrToStructure<dogecoin_tx>(tx);
@@ -521,15 +521,10 @@ namespace Lib.Dogecoin
 
 			for (uint i = 0; i < voutList.len; i++)
 			{
-				
-				
-
 				dogecoin_tx_out vout = Marshal.PtrToStructure<dogecoin_tx_out>(*(voutList.data + i));
 				
 				IntPtr freePtr = Marshal.GetFunctionPointerForDelegate(freeDelegate);
-				var partsPtr = LibDogecoinInterop.vector_new(16, IntPtr.Zero);
-
-
+				var partsPtr = LibDogecoinInterop.vector_new(16, freePtr);
 
 				var type = LibDogecoinInterop.dogecoin_script_classify(vout.script_pubkey, partsPtr);
 
@@ -543,8 +538,9 @@ namespace Lib.Dogecoin
 
 					Console.WriteLine($"{address.TerminateNull()} <- {((decimal)vout.value)/100000000}");
 				}
-			}
 
+				LibDogecoinInterop.vector_free(partsPtr, true);
+			}
 		}
 
 		public static string ByteArrayToHexString(byte[] bytes)

@@ -26,7 +26,7 @@ namespace Lib.Dogecoin
 
 		public delegate void header_connected_delegate(dogecoin_spv_client client);
 		public delegate void sync_completed_delegate(dogecoin_spv_client client);
-		public delegate bool header_message_processed_delegate(dogecoin_spv_client client, IntPtr node, IntPtr newtip);
+		public delegate bool header_message_processed_delegate(dogecoin_spv_client client, IntPtr node, dogecoin_block_header newtip);
 		public delegate void sync_transaction_delegate(IntPtr ctx, IntPtr tx, uint pos, IntPtr blockindex);
 
 		[MarshalAs(UnmanagedType.FunctionPtr)]
@@ -104,5 +104,29 @@ namespace Lib.Dogecoin
 		public byte[] Data; /* associated data, if any */
 		public UIntPtr DataLength;
 	}
+
+	
+
+	[StructLayout(LayoutKind.Sequential, Pack = 8)]
+	public struct dogecoin_block_header
+	{
+		public int version;
+		public uint prev_block;
+		public uint merkle_root;
+		public uint timestamp;
+		public uint bits;
+		public uint nonce;
+		public IntPtr auxpow;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 8)]
+	public struct dogecoin_blockindex
+	{
+		public uint height;
+		public uint hash; //32 byte array
+		public IntPtr header; //size 104 bytes, alignment 8 bytes
+		public IntPtr prev;
+	}
+
 
 }
