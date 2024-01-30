@@ -2,22 +2,19 @@
 
 using Lib.Dogecoin;
 
-
 var node = new SPVNode();
 
 node.OnTransaction = (tx) =>
 {
-	Console.WriteLine($"Block#{node.Blockheight} {tx.TxId} @ {tx.Timestamp}");
-
-	foreach(var inUTXO in tx.Out)
+	foreach(var output in tx.Out)
 	{
-		if(inUTXO.ScriptPubKey.GetP2PKHAddress() == "D6hbn1AugHq3WVtTVSv1fZAg6atPAMtwuV")
+		if (output.ScriptPubKey.GetP2PKHAddress() == "D6hbn1AugHq3WVtTVSv1fZAg6atPAMtwuV")
 		{
-			Console.WriteLine("FOUND ME");
+			Console.WriteLine($"Received {output.Amount} dogecoin!");
+			Console.WriteLine($"Block#{node.Blockheight} {tx.TxId}-{output.vOut} @ {tx.Timestamp}");
 		}
 	}
 };
-
 
 node.Start();
 
@@ -28,3 +25,5 @@ node.Stop();
 
 Console.WriteLine("SPV Stopped");
 Console.ReadLine();
+
+
