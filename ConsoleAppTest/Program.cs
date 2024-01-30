@@ -2,13 +2,29 @@
 
 using Lib.Dogecoin;
 
-var ctx = LibDogecoinContext.CreateContext();
 
-var client = ctx.CreateSPVClient();
+var node = new SPVNode();
 
-ctx.SPVConnect(client);
+node.OnTransaction = (tx) =>
+{
+	Console.WriteLine($"Block#{node.Blockheight} {tx.TxId} @ {tx.Timestamp}");
 
-ctx.RunSPVLoop(client);
+	foreach(var inUTXO in tx.Out)
+	{
+		if(inUTXO.ScriptPubKey.GetP2PKHAddress() == "D6hbn1AugHq3WVtTVSv1fZAg6atPAMtwuV")
+		{
+			Console.WriteLine("FOUND ME");
+		}
+	}
+};
+
+
+node.Start();
 
 Console.ReadLine();
+Console.WriteLine("Stopping SPV");
 
+node.Stop();
+
+Console.WriteLine("SPV Stopped");
+Console.ReadLine();
