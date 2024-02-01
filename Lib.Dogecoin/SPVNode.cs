@@ -15,23 +15,20 @@ namespace Lib.Dogecoin
 		private Thread _thread;
 		private IntPtr _spvNodeRef;
 
-		public SPVNode()//(bool mainNet = true, string headerFile = null)
+		public SPVNode(bool mainNet = true, string headerFile = null, bool useCheckpoints = true)
 		{
 			IsMainNet = true;
-
-			//if(!string.IsNullOrEmpty(headerFile))
-			//{
-			//	//Steps:
-			//	// make a copy of current header file (if present)
-			//	// copy headerfile and rename
-			//}
-
+			HeaderFile = headerFile;
+			UseCheckpoints = useCheckpoints;
 		}
 
+		public string HeaderFile { get; private set; }
 		
 		public bool IsMainNet { get; private set; }
 		
 		public uint Blockheight { get; private set; }
+
+		public bool UseCheckpoints { get; private set; }
 		
 		public DateTime LatestTimestamp { get; private set; }
 
@@ -48,7 +45,32 @@ namespace Lib.Dogecoin
 
 			_thread = new Thread(() =>
 			{
+				if(HeaderFile != null)
+				{
+					LibDogecoinInterop.dogecoin_spv_client_load(_spvNodeRef, HeaderFile.NullTerminate());
+				}
 				LibDogecoinInterop.dogecoin_spv_client_discover_peers(_spvNodeRef, null);
+
+
+				unsafe
+				{
+					var client = Marshal.PtrToStructure<dogecoin_spv_client>(_spvNodeRef);
+
+					var headerDb = *client.headers_db;
+
+					if (headerDb.has_checkpoint_start(client.headers_db_ctx) == 0)
+					{
+						var header = "cacda22e5e2c867676bd9d245f3bbbef58dc1349361182f3b790e3accd0c0a85";
+
+						var headerBytes = HexStringToLittleEndianByteArray(header);
+
+						uint height = 50712229;
+
+						headerDb.set_checkpoint_start(client.headers_db_ctx, headerBytes, height);
+					}
+
+				}
+
 				LibDogecoinInterop.dogecoin_spv_client_runloop(_spvNodeRef);
 			});
 
@@ -63,15 +85,23 @@ namespace Lib.Dogecoin
 		}
 
 
-		private void CreateSPVClient()
+
+
+
+		private unsafe void CreateSPVClient()
 		{
-			_spvNodeRef = LibDogecoinInterop.dogecoin_spv_client_new(LibDogecoinContext._mainChain, false, true, true, true);
+
+			var net = IsMainNet ? LibDogecoinContext._mainChain : LibDogecoinContext._testChain;
+
+			_spvNodeRef = LibDogecoinInterop.dogecoin_spv_client_new(net, false, HeaderFile == null, false, true);
+
 
 			syncTransactionCallback = new dogecoin_spv_client.sync_transaction_delegate(SyncTransaction);
 
 			Marshal.WriteIntPtr(_spvNodeRef,
 				Marshal.OffsetOf(typeof(dogecoin_spv_client),
 				nameof(dogecoin_spv_client.sync_transaction)).ToInt32(), Marshal.GetFunctionPointerForDelegate(syncTransactionCallback));
+
 
 		}
 
@@ -151,6 +181,23 @@ namespace Lib.Dogecoin
 				hex.AppendFormat("{0:x2}", b);
 			}
 			return hex.ToString();
+		}
+
+		public static byte[] HexStringToLittleEndianByteArray(string hex)
+		{
+			if (hex == null)
+				return null;
+			if (hex.Length % 2 == 1)
+				hex = "0" + hex;
+
+			byte[] bytes = new byte[hex.Length / 2];
+			for (int i = 0; i < hex.Length; i += 2)
+			{
+				bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
+			}
+
+			Array.Reverse(bytes);
+			return bytes;
 		}
 	}
 }

@@ -389,32 +389,29 @@ namespace Lib.Dogecoin.Interop
         [DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
         public static unsafe extern dogecoin_tx_out_type dogecoin_script_classify_ops(vector* ops);
 
-
         [DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
         public static extern void dogecoin_tx_hash(IntPtr tx, [Out] byte[] hashout);
-
 
         [DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
         public static extern void dogecoin_node_group_shutdown(IntPtr group);
 
-
 		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
 		public static extern void dogecoin_node_send(IntPtr node, IntPtr data);
-
 
 		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
 		public static extern unsafe cstring* dogecoin_p2p_message_new(char[] netmagic, char[] command, IntPtr data, uint data_len);
 
-
 		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
 		public static extern void dogecoin_spv_client_free(IntPtr spvClient);
-
 
 		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
 		public static extern unsafe cstring* cstr_new(char[] str);
 
 		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
 		public static extern unsafe void cstr_free(cstring* s, int free_buf);
+
+		[DllImport(DLL_NAME, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+		public static extern bool dogecoin_spv_client_load(IntPtr spvClient, char[] file);
 
 		#endregion SPV
 

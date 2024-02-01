@@ -9,7 +9,7 @@ namespace Lib.Dogecoin.Interop
 {
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct dogecoin_spv_client
+    public unsafe struct dogecoin_spv_client
     {
         public IntPtr nodegroup;
         public ulong last_headersrequest_time;
@@ -21,8 +21,8 @@ namespace Lib.Dogecoin.Interop
         public ulong last_statecheck_time;
         [MarshalAs(UnmanagedType.U1)]
         public bool called_sync_completed;
-        public IntPtr headers_db_ctx;
-        public IntPtr headers_db;
+        public void* headers_db_ctx;
+        public dogecoin_headers_db_interface* headers_db;
 
         public delegate void header_connected_delegate(dogecoin_spv_client client);
         public delegate void sync_completed_delegate(dogecoin_spv_client client);
@@ -167,5 +167,76 @@ namespace Lib.Dogecoin.Interop
         public IntPtr prev;
     }
 
+
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+	public struct dogecoin_dns_seed
+	{
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+		public string domain;
+	}
+
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+	public struct dogecoin_chainparams
+	{
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+		public string chainname;
+		public byte b58prefix_pubkey_address;
+		public byte b58prefix_script_address;
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 5)]
+		public string bech32_hrp;
+		public byte b58prefix_secret_address;
+		public uint b58prefix_bip32_privkey;
+		public uint b58prefix_bip32_pubkey;
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
+		public byte[] netmagic;
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
+		public byte[] genesisblockhash;
+		public int default_port;
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+		public dogecoin_dns_seed[] dnsseeds;
+		public bool strict_id;
+		public bool auxpow_id;
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
+		public byte[] pow_limit;
+	}
+
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+	public struct dogecoin_checkpoint
+	{
+		public uint height;
+		[MarshalAs(UnmanagedType.LPStr)]
+		public string hash;
+		public uint timestamp;
+		public uint target;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct buffer
+	{
+		public IntPtr p;
+		public UIntPtr len;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct const_buffer
+	{
+		public IntPtr p;
+		public UIntPtr len;
+	}
+
+
+	[StructLayout(LayoutKind.Sequential)]
+	public unsafe struct dogecoin_headers_db_interface
+	{
+		public delegate* unmanaged[Cdecl]<dogecoin_chainparams*, byte, void*> init;
+		public delegate* unmanaged[Cdecl]<void*, void> free;
+		public delegate* unmanaged[Cdecl]<void*, char*, byte> load;
+		public delegate* unmanaged[Cdecl]<void*, vector*, void> fill_blocklocator_tip;
+		public delegate* unmanaged[Cdecl]<void*, const_buffer*, byte, byte*, dogecoin_blockindex*> connect_hdr;
+		public delegate* unmanaged[Cdecl]<void*, dogecoin_blockindex*> getchaintip;
+		public delegate* unmanaged[Cdecl]<void*, byte> disconnect_tip;
+		public delegate* unmanaged[Cdecl]<void*, byte> has_checkpoint_start;
+		public delegate* unmanaged[Cdecl]<void*, byte[], uint, void> set_checkpoint_start;
+	}
 
 }
