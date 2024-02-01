@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -10,29 +11,184 @@ using Lib.Dogecoin.Interop;
 
 namespace Lib.Dogecoin
 {
-    public class SPVNode
-	{
-		private Thread _thread;
-		private IntPtr _spvNodeRef;
 
-		public SPVNode(bool mainNet = true, string headerFile = null, bool useCheckpoints = true)
+	public class SPVNodeBuilder
+	{
+		private SPVCheckpoint _start;
+		private bool _useMainNet = false;
+		private bool _useDebug = false;
+		private Action<SPVNodeTransaction> _onTransaction;
+		private Action<SPVNodeBlockInfo, SPVNodeBlockInfo> _onNextBlock;
+
+		public ISPVCheckpointTracker CheckpointTracker { get; set; }
+
+
+		public SPVNodeBuilder StartAt(SPVCheckpoint checkpoint)
 		{
-			IsMainNet = true;
-			HeaderFile = headerFile;
-			UseCheckpoints = useCheckpoints;
+			_start = checkpoint;
+			return this;
 		}
 
-		public string HeaderFile { get; private set; }
-		
+		public SPVNodeBuilder StartAt(string blockHash, uint blockHeight)
+		{
+			return StartAt(new SPVCheckpoint
+			{
+				BlockHash = blockHash,
+				BlockHeight = blockHeight
+			});
+		}
+
+		public SPVNodeBuilder EnableDebug()
+		{
+			_useDebug = true;
+			return this;
+		}
+
+		public SPVNodeBuilder UseMainNet()
+		{
+			_useMainNet = true;
+			return this;
+		}
+
+		public SPVNodeBuilder UseTestNet()
+		{
+			_useMainNet = false;
+			return this;
+		}
+
+		public SPVNodeBuilder OnTransaction(Action<SPVNodeTransaction> action)
+		{
+			_onTransaction = action;
+			return this;
+		}
+
+
+		public SPVNodeBuilder OnNextBlock(Action<SPVNodeBlockInfo, SPVNodeBlockInfo> action)
+		{
+			_onNextBlock = action;
+			return this;
+		}
+
+		public SPVNode Build()
+		{
+			var node = new SPVNode(CheckpointTracker, _useMainNet, _useDebug, _start);
+
+			node.OnTransaction = _onTransaction;
+			node.OnNextBlock = _onNextBlock;
+
+			return node;
+		}
+
+	}
+
+	internal class SPVFileCheckpointTracker : ISPVCheckpointTracker
+	{
+		private string _file;
+
+		public SPVFileCheckpointTracker(string file)
+		{
+			_file = file;
+		}
+
+		public SPVCheckpoint GetCheckpoint()
+		{
+			if (File.Exists(_file))
+			{
+				var content = File.ReadAllText(_file);
+
+				var parts = content.Split(":");
+
+				return new SPVCheckpoint
+				{
+					BlockHash = parts[0],
+					BlockHeight = uint.Parse(parts[1])
+				};
+			}
+
+			return null;
+		}
+
+		public void SaveCheckpoint(SPVCheckpoint checkpoint)
+		{
+			try
+			{
+				File.WriteAllText(_file, $"{checkpoint.BlockHash}:{checkpoint.BlockHeight}");
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine($"Failed to save checkpoing: {checkpoint.BlockHash}:{checkpoint.BlockHeight}");
+				Debug.WriteLine(ex);
+			}
+		}
+	}
+
+	public static class SPVFileCheckpointTrackerExtensions
+	{
+		public static SPVNodeBuilder UseCheckpointFile(this SPVNodeBuilder builder, string file)
+		{
+			builder.CheckpointTracker = new SPVFileCheckpointTracker(file);
+
+			return builder;
+		}
+	}
+
+	public interface ISPVCheckpointTracker
+	{
+		SPVCheckpoint GetCheckpoint();
+
+		void SaveCheckpoint(SPVCheckpoint checkpoint);
+	}
+
+
+	public class SPVCheckpoint
+	{
+		public string BlockHash { get; set;}
+		public uint BlockHeight { get; set;}
+	}
+
+	public class SPVNode
+	{
+		private bool _isDebug;
+		private Thread _thread;
+		private IntPtr _spvNodeRef;
+		private static dogecoin_spv_client.sync_transaction_delegate syncTransactionCallback;
+
+		private ISPVCheckpointTracker _checkpointTracker;
+		private SPVCheckpoint _startPoint;
+
+		public SPVNode(ISPVCheckpointTracker tracker, bool isMainNet, bool isDebug, SPVCheckpoint startPoint)
+		{
+			_checkpointTracker = tracker;
+			_isDebug = isDebug;
+			IsMainNet = isMainNet;
+			_startPoint = startPoint;
+		}
+
 		public bool IsMainNet { get; private set; }
 		
-		public uint Blockheight { get; private set; }
-
-		public bool UseCheckpoints { get; private set; }
-		
-		public DateTime LatestTimestamp { get; private set; }
+		public SPVNodeBlockInfo CurrentBlockInfo { get; private set; }
 
 		public Action<SPVNodeTransaction> OnTransaction { get; set; }
+
+		public Action<SPVNodeBlockInfo, SPVNodeBlockInfo> OnNextBlock { get; set; }
+
+		private void BeforeOnNextBlock(SPVNodeBlockInfo previousBlock, SPVNodeBlockInfo nextBlock)
+		{
+			if(_checkpointTracker != null && previousBlock != null)
+			{
+				_checkpointTracker.SaveCheckpoint(new SPVCheckpoint
+				{
+					BlockHash = previousBlock.Hash,
+					BlockHeight = previousBlock.BlockHeight
+				});
+			}
+
+			if(OnNextBlock != null)
+			{
+				OnNextBlock(previousBlock, nextBlock);
+			}
+		}
+
 
 		public void Start()
 		{
@@ -45,12 +201,7 @@ namespace Lib.Dogecoin
 
 			_thread = new Thread(() =>
 			{
-				if(HeaderFile != null)
-				{
-					LibDogecoinInterop.dogecoin_spv_client_load(_spvNodeRef, HeaderFile.NullTerminate());
-				}
 				LibDogecoinInterop.dogecoin_spv_client_discover_peers(_spvNodeRef, null);
-
 
 				unsafe
 				{
@@ -60,13 +211,23 @@ namespace Lib.Dogecoin
 
 					if (headerDb.has_checkpoint_start(client.headers_db_ctx) == 0)
 					{
-						var header = "cacda22e5e2c867676bd9d245f3bbbef58dc1349361182f3b790e3accd0c0a85";
+						SPVCheckpoint checkpoint = null;
 
-						var headerBytes = HexStringToLittleEndianByteArray(header);
+						if(_startPoint != null)
+						{
+							checkpoint = _startPoint;
+						}
+						else if (_checkpointTracker != null)
+						{
+							checkpoint = _checkpointTracker.GetCheckpoint();
+						}
 
-						uint height = 50712229;
-
-						headerDb.set_checkpoint_start(client.headers_db_ctx, headerBytes, height);
+						if (checkpoint != null)
+						{
+							headerDb.set_checkpoint_start(client.headers_db_ctx,
+														  HexStringToLittleEndianByteArray(checkpoint.BlockHash),
+														  checkpoint.BlockHeight);
+						}
 					}
 
 				}
@@ -93,7 +254,7 @@ namespace Lib.Dogecoin
 
 			var net = IsMainNet ? LibDogecoinContext._mainChain : LibDogecoinContext._testChain;
 
-			_spvNodeRef = LibDogecoinInterop.dogecoin_spv_client_new(net, false, HeaderFile == null, false, true);
+			_spvNodeRef = LibDogecoinInterop.dogecoin_spv_client_new(net, _isDebug, true, false, true);
 
 
 			syncTransactionCallback = new dogecoin_spv_client.sync_transaction_delegate(SyncTransaction);
@@ -101,12 +262,7 @@ namespace Lib.Dogecoin
 			Marshal.WriteIntPtr(_spvNodeRef,
 				Marshal.OffsetOf(typeof(dogecoin_spv_client),
 				nameof(dogecoin_spv_client.sync_transaction)).ToInt32(), Marshal.GetFunctionPointerForDelegate(syncTransactionCallback));
-
-
 		}
-
-		private static dogecoin_spv_client.sync_transaction_delegate syncTransactionCallback;
-
 
 
 		private unsafe void SyncTransaction(IntPtr ctx, IntPtr tx, uint pos, IntPtr blockindex)
@@ -118,13 +274,22 @@ namespace Lib.Dogecoin
 			var txId = ByteArrayToHexString(txHashBytes.Reverse().ToArray());
 
 			var blockIdx = Marshal.PtrToStructure<dogecoin_blockindex>(blockindex);
+			var blockTimestamp = DateTimeOffset.FromUnixTimeSeconds(blockIdx.header.timestamp);
 
-			//might want to use datetimeoffset?
-			var blockTimestamp = DateTimeOffset.FromUnixTimeSeconds(blockIdx.header.timestamp).DateTime;
-
-			Blockheight = blockIdx.height;
-			LatestTimestamp = blockTimestamp;
 			
+			if(CurrentBlockInfo == null || CurrentBlockInfo.BlockHeight < blockIdx.height)
+			{
+				var previousBlock = CurrentBlockInfo;
+
+				CurrentBlockInfo = new SPVNodeBlockInfo
+				{
+					BlockHeight = blockIdx.height,
+					Hash = LittleEndianByteArrayToHexString(blockIdx.hash),
+					Timestamp = blockTimestamp,
+				};
+
+				BeforeOnNextBlock(previousBlock, CurrentBlockInfo);
+			}
 
 			var nodeTransaction = new SPVNodeTransaction();
 			var inList = new List<UTXO>();
@@ -159,7 +324,7 @@ namespace Lib.Dogecoin
 				{
 					TxId = txId,
 					vOut = i,
-					Amount = vout.value,
+					AmountKoinu = vout.value,
 					ScriptPubKey = Marshal.PtrToStringAnsi((IntPtr)vout.script_pubkey->str)
 				});
 			}
@@ -183,7 +348,21 @@ namespace Lib.Dogecoin
 			return hex.ToString();
 		}
 
-		public static byte[] HexStringToLittleEndianByteArray(string hex)
+		public static string LittleEndianByteArrayToHexString(byte[] bytes)
+		{
+			if (bytes == null)
+				return null;
+
+			StringBuilder sb = new StringBuilder();
+			for (int i = bytes.Length - 1; i >= 0; i--)
+			{
+				sb.Append(bytes[i].ToString("X2"));
+			}
+
+			return sb.ToString();
+		}
+
+		private static byte[] HexStringToLittleEndianByteArray(string hex)
 		{
 			if (hex == null)
 				return null;

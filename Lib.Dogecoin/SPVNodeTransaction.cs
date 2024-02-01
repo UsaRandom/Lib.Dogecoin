@@ -12,10 +12,19 @@ namespace Lib.Dogecoin
 
 		public uint BlockHeight { get; set; }
 
-		public DateTime Timestamp { get; set; }
+		public DateTimeOffset Timestamp { get; set; }
 
 		public UTXO[] In { get; set; }
 
 		public UTXO[] Out { get; set;}
+	}
+
+	public class SPVNodeBlockInfo
+	{
+		public string Hash { get; set; }
+
+		public uint BlockHeight { get; set; }
+
+		public DateTimeOffset Timestamp { get; set; }
 	}
 }

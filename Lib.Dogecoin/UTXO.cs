@@ -12,7 +12,19 @@ namespace Lib.Dogecoin
 		
 		public uint vOut { get; set; }
 
-		public long? Amount { get; set; }
+		public long? AmountKoinu { get; set; }
+
+		public decimal Amount
+		{
+			get
+			{
+				return AmountKoinu.HasValue ? AmountKoinu.Value / 100000000M : 0;
+			}
+			set
+			{
+				AmountKoinu = (long)(value / 100000000M);
+			}
+		}
 
 		public string? ScriptPubKey { get; set; }
 	}
