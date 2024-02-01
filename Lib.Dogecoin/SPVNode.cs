@@ -148,6 +148,10 @@ namespace Lib.Dogecoin
 
 	public class SPVNode
 	{
+		private const int BLOCKS_BETWEEN_CHECKPOINTS = 10;
+
+		private uint _lastSPVCheckpointHeight = 0;
+
 		private bool _isDebug;
 		private Thread _thread;
 		private IntPtr _spvNodeRef;
@@ -176,11 +180,15 @@ namespace Lib.Dogecoin
 		{
 			if(_checkpointTracker != null && previousBlock != null)
 			{
-				_checkpointTracker.SaveCheckpoint(new SPVCheckpoint
+				if(previousBlock.BlockHeight - _lastSPVCheckpointHeight >= BLOCKS_BETWEEN_CHECKPOINTS)
 				{
-					BlockHash = previousBlock.Hash,
-					BlockHeight = previousBlock.BlockHeight
-				});
+					_checkpointTracker.SaveCheckpoint(new SPVCheckpoint
+					{
+						BlockHash = previousBlock.Hash,
+						BlockHeight = previousBlock.BlockHeight
+					});
+					_lastSPVCheckpointHeight = previousBlock.BlockHeight;
+				}
 			}
 
 			if(OnNextBlock != null)
@@ -308,7 +316,7 @@ namespace Lib.Dogecoin
 
 				inList.Add(new UTXO {
 					TxId = ByteArrayToHexString(vin.prevout.hash.Reverse().ToArray()),
-					vOut = vin.prevout.n
+					VOut = (int)vin.prevout.n
 				});
 			}
 
@@ -316,14 +324,14 @@ namespace Lib.Dogecoin
 			//handle outputs
 			var voutList = *transaction.vout;
 
-			for (uint i = 0; i < voutList.len; i++)
+			for (int i = 0; i < voutList.len; i++)
 			{
 				dogecoin_tx_out vout = Marshal.PtrToStructure<dogecoin_tx_out>(*(voutList.data + i));
 				
 				outList.Add(new UTXO
 				{
 					TxId = txId,
-					vOut = i,
+					VOut = i,
 					AmountKoinu = vout.value,
 					ScriptPubKey = Marshal.PtrToStringAnsi((IntPtr)vout.script_pubkey->str)
 				});

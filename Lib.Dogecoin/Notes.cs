@@ -13,20 +13,6 @@ namespace Lib.Dogecoin
 		{
 
 
-			var spvNode = new SPVNode();
-
-			var p2pkhWatcher = new SimpleP2PKHWalletWatcher("address");
-
-			p2pkhWatcher.AddUTXOToWatch(txid, vout);
-
-
-			spvNode.Start();
-
-
-
-
-			spvNode.Stop();
-
 
 		}
 	}

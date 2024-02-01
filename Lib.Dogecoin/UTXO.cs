@@ -10,7 +10,7 @@ namespace Lib.Dogecoin
 	{
 		public string TxId { get; set; }
 		
-		public uint vOut { get; set; }
+		public int VOut { get; set; }
 
 		public long? AmountKoinu { get; set; }
 
