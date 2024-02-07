@@ -96,6 +96,11 @@ namespace Lib.Dogecoin
 			{
 				var content = File.ReadAllText(_file);
 
+				if (string.IsNullOrEmpty(content))
+				{
+					return null;
+				}
+
 				var parts = content.Split(":");
 
 				return new SPVCheckpoint
@@ -142,8 +147,8 @@ namespace Lib.Dogecoin
 
 	public class SPVCheckpoint
 	{
-		public string BlockHash { get; set;}
-		public uint BlockHeight { get; set;}
+		public string BlockHash { get; set; }
+		public uint BlockHeight { get; set; }
 	}
 
 	public class SPVNode
@@ -168,8 +173,10 @@ namespace Lib.Dogecoin
 			_startPoint = startPoint;
 		}
 
+		public bool IsRunning { get; private set; }
+
 		public bool IsMainNet { get; private set; }
-		
+
 		public SPVNodeBlockInfo CurrentBlockInfo { get; private set; }
 
 		public Action<SPVNodeTransaction> OnTransaction { get; set; }
@@ -178,9 +185,9 @@ namespace Lib.Dogecoin
 
 		private void BeforeOnNextBlock(SPVNodeBlockInfo previousBlock, SPVNodeBlockInfo nextBlock)
 		{
-			if(_checkpointTracker != null && previousBlock != null)
+			if (_checkpointTracker != null && previousBlock != null)
 			{
-				if(previousBlock.BlockHeight - _lastSPVCheckpointHeight >= BLOCKS_BETWEEN_CHECKPOINTS)
+				if (previousBlock.BlockHeight - _lastSPVCheckpointHeight >= BLOCKS_BETWEEN_CHECKPOINTS)
 				{
 					_checkpointTracker.SaveCheckpoint(new SPVCheckpoint
 					{
@@ -191,7 +198,7 @@ namespace Lib.Dogecoin
 				}
 			}
 
-			if(OnNextBlock != null)
+			if (OnNextBlock != null)
 			{
 				OnNextBlock(previousBlock, nextBlock);
 			}
@@ -200,7 +207,7 @@ namespace Lib.Dogecoin
 
 		public void Start()
 		{
-			if(_thread != null && _thread.IsAlive)
+			if (_thread != null && _thread.IsAlive)
 			{
 				throw new Exception("SPV Already Running!");
 			}
@@ -209,6 +216,8 @@ namespace Lib.Dogecoin
 
 			_thread = new Thread(() =>
 			{
+				IsRunning = true;
+
 				LibDogecoinInterop.dogecoin_spv_client_discover_peers(_spvNodeRef, null);
 
 				unsafe
@@ -221,7 +230,7 @@ namespace Lib.Dogecoin
 					{
 						SPVCheckpoint checkpoint = null;
 
-						if(_startPoint != null)
+						if (_startPoint != null)
 						{
 							checkpoint = _startPoint;
 						}
@@ -241,6 +250,7 @@ namespace Lib.Dogecoin
 				}
 
 				LibDogecoinInterop.dogecoin_spv_client_runloop(_spvNodeRef);
+				IsRunning = false;
 			});
 
 			_thread.Start();
@@ -249,12 +259,18 @@ namespace Lib.Dogecoin
 		public void Stop()
 		{
 			var spv = Marshal.PtrToStructure<dogecoin_spv_client>(_spvNodeRef);
-			
+
 			LibDogecoinInterop.dogecoin_node_group_shutdown(spv.nodegroup);
 		}
 
 
-
+		~SPVNode()
+		{
+			if(_spvNodeRef != IntPtr.Zero)
+			{
+				LibDogecoinInterop.dogecoin_spv_client_free(_spvNodeRef);
+			}
+		}
 
 
 		private unsafe void CreateSPVClient()
@@ -284,8 +300,8 @@ namespace Lib.Dogecoin
 			var blockIdx = Marshal.PtrToStructure<dogecoin_blockindex>(blockindex);
 			var blockTimestamp = DateTimeOffset.FromUnixTimeSeconds(blockIdx.header.timestamp);
 
-			
-			if(CurrentBlockInfo == null || CurrentBlockInfo.BlockHeight < blockIdx.height)
+
+			if (CurrentBlockInfo == null || CurrentBlockInfo.BlockHeight < blockIdx.height)
 			{
 				var previousBlock = CurrentBlockInfo;
 
@@ -312,9 +328,10 @@ namespace Lib.Dogecoin
 			var vinList = *transaction.vin;
 			for (var i = 0; i < vinList.len; i++)
 			{
-				dogecoin_tx_in vin = Marshal.PtrToStructure<dogecoin_tx_in>(*(vinList.data));
+				dogecoin_tx_in vin = Marshal.PtrToStructure<dogecoin_tx_in>(*(vinList.data + i));
 
-				inList.Add(new UTXO {
+				inList.Add(new UTXO
+				{
 					TxId = ByteArrayToHexString(vin.prevout.hash.Reverse().ToArray()),
 					VOut = (int)vin.prevout.n
 				});
@@ -327,7 +344,7 @@ namespace Lib.Dogecoin
 			for (int i = 0; i < voutList.len; i++)
 			{
 				dogecoin_tx_out vout = Marshal.PtrToStructure<dogecoin_tx_out>(*(voutList.data + i));
-				
+
 				outList.Add(new UTXO
 				{
 					TxId = txId,
@@ -340,7 +357,7 @@ namespace Lib.Dogecoin
 			nodeTransaction.In = inList.ToArray();
 			nodeTransaction.Out = outList.ToArray();
 
-			if(OnTransaction != null)
+			if (OnTransaction != null)
 			{
 				OnTransaction(nodeTransaction);
 			}
